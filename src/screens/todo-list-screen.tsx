@@ -81,8 +81,17 @@ const TodoListScreen = () => {
     [handleEdit],
   );
 
+  /**
+   * Extracts a unique key for each todo item
+   * @param {Todo} item - The todo item
+   * @returns {string} The unique key (todo id)
+   */
   const keyExtractor = useCallback((item: Todo) => item.id, []);
 
+  /**
+   * Handles the sorting of todos
+   * @param {SortOption} newSortBy - The new sort option
+   */
   const handleSort = (newSortBy: SortOption) => {
     if (sortBy === newSortBy) {
       // Toggle sort order if same sort option is selected
@@ -94,6 +103,9 @@ const TodoListScreen = () => {
     setShowSortMenu(false);
   };
 
+  /**
+   * Fetches todos from the API and updates the store
+   */
   const handleFetchTodos = useCallback(async () => {
     try {
       dispatch(setLoading(true));
