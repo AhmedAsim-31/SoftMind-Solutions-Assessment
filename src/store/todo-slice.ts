@@ -14,6 +14,8 @@ interface TodoState {
   searchQuery: string;
   sortBy: 'name' | 'date' | 'time';
   sortOrder: 'asc' | 'desc';
+  isLoading: boolean;
+  error: string | null;
 }
 
 const initialState: TodoState = {
@@ -21,6 +23,8 @@ const initialState: TodoState = {
   searchQuery: '',
   sortBy: 'date',
   sortOrder: 'asc',
+  isLoading: false,
+  error: null,
 };
 
 const todoSlice = createSlice({
@@ -54,6 +58,15 @@ const todoSlice = createSlice({
     setSortOrder: (state, action: PayloadAction<'asc' | 'desc'>) => {
       state.sortOrder = action.payload;
     },
+    setTodos: (state, action: PayloadAction<Todo[]>) => {
+      state.todos = action.payload;
+    },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
+    },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+    },
   },
 });
 
@@ -65,5 +78,8 @@ export const {
   setSearchQuery,
   setSortBy,
   setSortOrder,
+  setTodos,
+  setLoading,
+  setError,
 } = todoSlice.actions;
 export default todoSlice.reducer; 

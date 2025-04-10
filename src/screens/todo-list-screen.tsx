@@ -1,14 +1,21 @@
 import React, {useMemo, useCallback, useState} from 'react';
 import {View, FlatList, StyleSheet} from 'react-native';
-import {useSelector} from 'react-redux';
-import {Searchbar, Button, Portal, Menu, Modal} from 'react-native-paper';
+import {useSelector, useDispatch} from 'react-redux';
+import {
+  Searchbar,
+  Button,
+  Menu,
+  Modal,
+  ActivityIndicator,
+} from 'react-native-paper';
 import {RootState} from '../store/store';
 import TodoItem from '../components/todo-item';
 import TodoForm from '../components/todo-form';
-import {Todo} from '../store/todo-slice';
+import {Todo, setTodos, setLoading, setError} from '../store/todo-slice';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/types';
+import {fetchTodos} from '../services/todo-api';
 
 type TodoListScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -20,7 +27,10 @@ type SortOrder = 'asc' | 'desc';
 
 const TodoListScreen = () => {
   const navigation = useNavigation<TodoListScreenNavigationProp>();
-  const {todos} = useSelector((state: RootState) => state.todos);
+  const dispatch = useDispatch();
+  const {todos, isLoading, error} = useSelector(
+    (state: RootState) => state.todos,
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date');
@@ -81,6 +91,21 @@ const TodoListScreen = () => {
     setShowSortMenu(false);
   };
 
+  const handleFetchTodos = useCallback(async () => {
+    try {
+      dispatch(setLoading(true));
+      dispatch(setError(null));
+      const fetchedTodos = await fetchTodos();
+      dispatch(setTodos(fetchedTodos));
+    } catch (err) {
+      dispatch(
+        setError(err instanceof Error ? err.message : 'Failed to fetch todos'),
+      );
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -97,7 +122,6 @@ const TodoListScreen = () => {
             <Button
               mode="outlined"
               onPress={() => setShowSortMenu(true)}
-              icon="sort"
               style={styles.sortButton}>
               Sort By
             </Button>
@@ -134,20 +158,42 @@ const TodoListScreen = () => {
           {sortedAndFilteredTodos.filter(todo => !todo.completed).length}
         </Button>
       </View>
+      <Button
+        mode="contained"
+        onPress={handleFetchTodos}
+        loading={isLoading}
+        disabled={isLoading}
+        style={styles.fetchButton}>
+        Fetch Todos
+      </Button>
 
-      <FlatList
-        data={sortedAndFilteredTodos}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Button mode="text" color="#757575">
-              {searchQuery ? 'No matching todos found' : 'No todos yet'}
-            </Button>
-          </View>
-        }
-      />
+      {error && (
+        <View style={styles.errorContainer}>
+          <Button mode="text" textColor="red">
+            {error}
+          </Button>
+        </View>
+      )}
+
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <FlatList
+          data={sortedAndFilteredTodos}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Button mode="text">
+                {searchQuery ? 'No matching todos found' : 'No todos yet'}
+              </Button>
+            </View>
+          }
+        />
+      )}
 
       <Modal
         visible={editingTodo !== null}
@@ -210,6 +256,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  fetchButton: {
+    marginVertical: 10,
+    marginHorizontal: 20,
   },
 });
 
