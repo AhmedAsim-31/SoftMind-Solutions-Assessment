@@ -39,10 +39,13 @@ const TodoListScreen = () => {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
 
   const sortedAndFilteredTodos = useMemo(() => {
+    const searchQueryLower = searchQuery.toLowerCase();
     let filteredTodos = todos.filter(
       todo =>
-        todo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        todo.description.toLowerCase().includes(searchQuery.toLowerCase()),
+        todo.name.toLowerCase().includes(searchQueryLower) ||
+        todo.description.toLowerCase().includes(searchQueryLower) ||
+        todo.dueDate.toLowerCase().includes(searchQueryLower) ||
+        todo.dueTime.toLowerCase().includes(searchQueryLower),
     );
 
     return filteredTodos.sort((a, b) => {
