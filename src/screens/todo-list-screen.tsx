@@ -11,7 +11,7 @@ import {
 import {RootState} from '../store/store';
 import TodoItem from '../components/todo-item';
 import TodoForm from '../components/todo-form';
-import {Todo, setTodos, setLoading, setError} from '../store/todo-slice';
+import {Todo, mergeTodos, setLoading, setError} from '../store/todo-slice';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/types';
@@ -96,7 +96,7 @@ const TodoListScreen = () => {
       dispatch(setLoading(true));
       dispatch(setError(null));
       const fetchedTodos = await fetchTodos();
-      dispatch(setTodos(fetchedTodos));
+      dispatch(mergeTodos(fetchedTodos));
     } catch (err) {
       dispatch(
         setError(err instanceof Error ? err.message : 'Failed to fetch todos'),

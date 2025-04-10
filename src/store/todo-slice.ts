@@ -61,6 +61,19 @@ const todoSlice = createSlice({
     setTodos: (state, action: PayloadAction<Todo[]>) => {
       state.todos = action.payload;
     },
+    mergeTodos: (state, action: PayloadAction<Todo[]>) => {
+      // Create a map of existing todos by ID for quick lookup
+      const existingTodosMap = new Map(
+        state.todos.map(todo => [todo.id, todo])
+      );
+      
+      // Add new todos that dont already exist
+      action.payload.forEach(newTodo => {
+        if (!existingTodosMap.has(newTodo.id)) {
+          state.todos.push(newTodo);
+        }
+      });
+    },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
@@ -79,6 +92,7 @@ export const {
   setSortBy,
   setSortOrder,
   setTodos,
+  mergeTodos,
   setLoading,
   setError,
 } = todoSlice.actions;
