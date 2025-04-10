@@ -1,14 +1,21 @@
 import React, {useMemo, useCallback, useState} from 'react';
 import {View, FlatList, StyleSheet} from 'react-native';
-import {useSelector} from 'react-redux';
-import {Searchbar, Button, Portal, Menu, Modal} from 'react-native-paper';
+import {useSelector, useDispatch} from 'react-redux';
+import {
+  Searchbar,
+  Button,
+  Menu,
+  Modal,
+  ActivityIndicator,
+} from 'react-native-paper';
 import {RootState} from '../store/store';
 import TodoItem from '../components/todo-item';
 import TodoForm from '../components/todo-form';
-import {Todo} from '../store/todo-slice';
+import {Todo, mergeTodos, setLoading, setError} from '../store/todo-slice';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/types';
+import {fetchTodos} from '../services/todo-api';
 
 type TodoListScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -20,7 +27,10 @@ type SortOrder = 'asc' | 'desc';
 
 const TodoListScreen = () => {
   const navigation = useNavigation<TodoListScreenNavigationProp>();
-  const {todos} = useSelector((state: RootState) => state.todos);
+  const dispatch = useDispatch();
+  const {todos, isLoading, error} = useSelector(
+    (state: RootState) => state.todos,
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date');
@@ -29,10 +39,13 @@ const TodoListScreen = () => {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
 
   const sortedAndFilteredTodos = useMemo(() => {
+    const searchQueryLower = searchQuery.toLowerCase();
     let filteredTodos = todos.filter(
       todo =>
-        todo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        todo.description.toLowerCase().includes(searchQuery.toLowerCase()),
+        todo.name.toLowerCase().includes(searchQueryLower) ||
+        todo.description.toLowerCase().includes(searchQueryLower) ||
+        todo.dueDate.toLowerCase().includes(searchQueryLower) ||
+        todo.dueTime.toLowerCase().includes(searchQueryLower),
     );
 
     return filteredTodos.sort((a, b) => {
@@ -68,8 +81,17 @@ const TodoListScreen = () => {
     [handleEdit],
   );
 
+  /**
+   * Extracts a unique key for each todo item
+   * @param {Todo} item - The todo item
+   * @returns {string} The unique key (todo id)
+   */
   const keyExtractor = useCallback((item: Todo) => item.id, []);
 
+  /**
+   * Handles the sorting of todos
+   * @param {SortOption} newSortBy - The new sort option
+   */
   const handleSort = (newSortBy: SortOption) => {
     if (sortBy === newSortBy) {
       // Toggle sort order if same sort option is selected
@@ -80,6 +102,24 @@ const TodoListScreen = () => {
     }
     setShowSortMenu(false);
   };
+
+  /**
+   * Fetches todos from the API and updates the store
+   */
+  const handleFetchTodos = useCallback(async () => {
+    try {
+      dispatch(setLoading(true));
+      dispatch(setError(null));
+      const fetchedTodos = await fetchTodos();
+      dispatch(mergeTodos(fetchedTodos));
+    } catch (err) {
+      dispatch(
+        setError(err instanceof Error ? err.message : 'Failed to fetch todos'),
+      );
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch]);
 
   return (
     <View style={styles.container}>
@@ -97,7 +137,6 @@ const TodoListScreen = () => {
             <Button
               mode="outlined"
               onPress={() => setShowSortMenu(true)}
-              icon="sort"
               style={styles.sortButton}>
               Sort By
             </Button>
@@ -134,20 +173,42 @@ const TodoListScreen = () => {
           {sortedAndFilteredTodos.filter(todo => !todo.completed).length}
         </Button>
       </View>
+      <Button
+        mode="contained"
+        onPress={handleFetchTodos}
+        loading={isLoading}
+        disabled={isLoading}
+        style={styles.fetchButton}>
+        Fetch Todos
+      </Button>
 
-      <FlatList
-        data={sortedAndFilteredTodos}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Button mode="text" color="#757575">
-              {searchQuery ? 'No matching todos found' : 'No todos yet'}
-            </Button>
-          </View>
-        }
-      />
+      {error && (
+        <View style={styles.errorContainer}>
+          <Button mode="text" textColor="red">
+            {error}
+          </Button>
+        </View>
+      )}
+
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <FlatList
+          data={sortedAndFilteredTodos}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Button mode="text">
+                {searchQuery ? 'No matching todos found' : 'No todos yet'}
+              </Button>
+            </View>
+          }
+        />
+      )}
 
       <Modal
         visible={editingTodo !== null}
@@ -210,6 +271,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  fetchButton: {
+    marginVertical: 10,
+    marginHorizontal: 20,
   },
 });
 

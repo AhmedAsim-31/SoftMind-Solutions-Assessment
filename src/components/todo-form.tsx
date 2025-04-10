@@ -33,6 +33,9 @@ const TodoForm = ({initialTodo, onSubmit}: TodoFormProps) => {
   const [nameError, setNameError] = useState(false);
   const [descriptionError, setDescriptionError] = useState(false);
 
+  /**
+   * Resets the form to its initial state
+   */
   const resetForm = useCallback(() => {
     setName('');
     setDescription('');
@@ -44,6 +47,10 @@ const TodoForm = ({initialTodo, onSubmit}: TodoFormProps) => {
     setShowTimePicker(false);
   }, []);
 
+  /**
+   * Validates the form inputs
+   * @returns {boolean} true if all inputs are valid, false otherwise
+   */
   const validateInputs = useCallback(() => {
     const isNameValid = name.trim().length > 0;
     const isDescriptionValid = description.trim().length > 0;
