@@ -8,14 +8,13 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native-paper';
-import {RootState} from '../store/store';
+import {RootState, AppDispatch} from '../store/store';
 import TodoItem from '../components/todo-item';
 import TodoForm from '../components/todo-form';
-import {Todo, mergeTodos, setLoading, setError} from '../store/todo-slice';
+import {Todo, fetchTodosThunk} from '../store/todo-slice';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/types';
-import {fetchTodos} from '../services/todo-api';
 
 type TodoListScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,7 +26,7 @@ type SortOrder = 'asc' | 'desc';
 
 const TodoListScreen = () => {
   const navigation = useNavigation<TodoListScreenNavigationProp>();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const {todos, isLoading, error} = useSelector(
     (state: RootState) => state.todos,
   );
@@ -104,21 +103,10 @@ const TodoListScreen = () => {
   };
 
   /**
-   * Fetches todos from the API and updates the store
+   * Fetches todos from the API using the thunk
    */
   const handleFetchTodos = useCallback(async () => {
-    try {
-      dispatch(setLoading(true));
-      dispatch(setError(null));
-      const fetchedTodos = await fetchTodos();
-      dispatch(mergeTodos(fetchedTodos));
-    } catch (err) {
-      dispatch(
-        setError(err instanceof Error ? err.message : 'Failed to fetch todos'),
-      );
-    } finally {
-      dispatch(setLoading(false));
-    }
+    dispatch(fetchTodosThunk());
   }, [dispatch]);
 
   return (
