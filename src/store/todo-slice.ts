@@ -1,4 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import { fetchTodos } from '../services/todo-api';
 
 export interface Todo {
   id: string;
@@ -48,6 +49,21 @@ const initialState: TodoState = {
   isLoading: false,
   error: null,
 };
+
+/**
+ * Async thunk for fetching todos from the API
+ */
+export const fetchTodosThunk = createAsyncThunk(
+  'todos/fetchTodos',
+  async (_, { rejectWithValue }) => {
+    try {
+      const todos = await fetchTodos();
+      return todos;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch todos');
+    }
+  }
+);
 
 /**
  * Todo slice containing all todo-related reducers and actions
@@ -149,6 +165,22 @@ const todoSlice = createSlice({
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchTodosThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchTodosThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.error = null;
+        state.todos = action.payload;
+      })
+      .addCase(fetchTodosThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
